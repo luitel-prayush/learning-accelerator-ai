@@ -65,21 +65,3 @@ npm run dev       # start Vite dev server
 npm run build     # type-check + build
 npm run preview   # preview production build
 ```
-
-## License
-Choose a license for your project (e.g., MIT). You can add a `LICENSE` file at the repo root.
-
-## Contributing
-- Create feature branches from `main`.
-- Submit PRs for review.
-
-## Branch Protection (Main)
-To enable branch protection via GitHub UI:
-1. Go to GitHub repo → Settings → Branches → Branch protection rules.
-2. Click “New rule”, set Branch name pattern to `main`.
-3. Recommended checks:
-   - Require a pull request before merging (with at least 1 approval).
-   - Require status checks to pass before merging (if/when CI is configured).
-   - Require branches to be up to date before merging.
-   - Include administrators (optional).
-4. Save changes.
