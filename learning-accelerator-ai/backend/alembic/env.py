@@ -24,6 +24,10 @@ from app import models  # noqa: F401,E402  ensure models are imported
 
 target_metadata = Base.metadata
 
+# Set sqlalchemy.url from env if provided
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./backend/data.db")
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
+
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
     context.configure(

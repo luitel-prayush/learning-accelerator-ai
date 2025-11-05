@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -60,6 +60,25 @@ def topics_suggest(req: SuggestRequest, db: Session = Depends(get_db)):
     return {"suggestions": seeds[:5]}
 
 
+# RESTful: GET /api/topics?suggest=python
+@app.get("/api/topics")
+def topics(query: Optional[str] = None, db: Session = Depends(get_db)):
+    if query is None:
+        # list topics
+        rows = db.query(models.Topic).all()
+        return {"items": [{"id": t.id, "name": t.name} for t in rows]}
+    q = query.strip()
+    seeds = [
+        f"{q} fundamentals",
+        f"{q} practice",
+        f"advanced {q}",
+    ] if q else ["python", "linear algebra", "docker"]
+    for s in seeds[:5]:
+        db.add(models.TopicSuggestion(query=q or "", suggestion=s))
+    db.commit()
+    return {"suggestions": seeds[:5]}
+
+
 @app.post("/api/learn/path")
 def learn_path(req: LearnPathRequest, db: Session = Depends(get_db)):
     topic_name = req.topic.strip() or "General Learning"
@@ -88,6 +107,36 @@ def learn_path(req: LearnPathRequest, db: Session = Depends(get_db)):
     return {"topic": topic.name, "modules": modules}
 
 
+def _get_or_create_topic(db: Session, topic_name: str) -> models.Topic:
+    t = db.query(models.Topic).filter(models.Topic.name == topic_name).first()
+    if t is None:
+        t = models.Topic(name=topic_name)
+        db.add(t)
+        db.flush()
+    return t
+
+
+# RESTful: GET /api/topics/{topic}/modules
+@app.get("/api/topics/{topic}/modules", status_code=status.HTTP_200_OK)
+def get_topic_modules(topic: str, db: Session = Depends(get_db)):
+    name = (topic or "").strip() or "General Learning"
+    t = _get_or_create_topic(db, name)
+    if not t.modules:
+        defaults = [
+            (f"Introduction to {name}", 15),
+            (f"Core Concepts of {name}", 25),
+            (f"Practice: {name}", 20),
+        ]
+        for title, duration in defaults:
+            db.add(models.Module(topic_id=t.id, title=title, duration_min=duration))
+        db.commit()
+        db.refresh(t)
+    return {
+        "topic": t.name,
+        "items": [{"id": m.id, "title": m.title, "duration_min": m.duration_min} for m in t.modules],
+    }
+
+
 @app.post("/api/quiz/next")
 def quiz_next(req: QuizNextRequest):
     topic = req.topic.strip() or "General"
@@ -114,6 +163,36 @@ def quiz_submit(req: QuizSubmitRequest, db: Session = Depends(get_db)):
     db.add(attempt)
     db.commit()
     return {"correct": is_correct, "score": round(score, 3)}
+
+
+# RESTful: GET /api/topics/{topic}/quiz/next
+@app.get("/api/topics/{topic}/quiz/next")
+def quiz_next_rest(topic: str):
+    name = (topic or "").strip() or "General"
+    question = {
+        "id": "q1",
+        "prompt": f"In {name}, explain one key concept in a sentence.",
+        "type": "free_text",
+    }
+    return {"question": question}
+
+
+# RESTful: POST /api/topics/{topic}/quiz/attempts
+class QuizAttemptCreate(BaseModel):
+    question_id: str
+    answer: str
+
+
+@app.post("/api/topics/{topic}/quiz/attempts", status_code=status.HTTP_201_CREATED)
+def create_quiz_attempt(topic: str, payload: QuizAttemptCreate, db: Session = Depends(get_db)):
+    name = (topic or "").strip() or "General"
+    text = (payload.answer or "").strip()
+    score = min(len(text) / 60.0, 1.0)
+    is_correct = score >= 0.5
+    attempt = models.QuizAttempt(topic=name, correct=is_correct, answer_text=text, score=score)
+    db.add(attempt)
+    db.commit()
+    return {"topic": name, "correct": is_correct, "score": round(score, 3)}
 
 
 @app.get("/api/progress")

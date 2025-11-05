@@ -6,6 +6,7 @@
 
 html, body {
   height: 100%;
+  width: 100%;
 }
 
 body {
@@ -17,9 +18,101 @@ body {
   color: #0a0a0a;
 }
 
+/* Dark mode full-viewport background */
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background-color: #0a0a0a;
+    color: #e5e5e5;
+  }
+  fast-card {
+    border-color: rgba(255,255,255,0.08);
+  }
+}
+
+/* Explicit dark mode (html.dark) */
+html.dark, html.dark body {
+  background-color: #0a0a0a;
+  color: #e5e5e5;
+}
+html.dark fast-card {
+  border-color: rgba(255,255,255,0.08);
+}
+
 #app {
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 72rem; /* 1152px */
-  padding: 1.5rem;
+  width: 100%;
+  padding: 0; /* containers inside manage padding */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Make FAST cards fill available width and look good on mobile */
+fast-card {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: transparent; /* let page background show through */
+  box-shadow: none;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Inputs span full width by default for better mobile UX */
+fast-text-field {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Use the FAST provider as a flex column to allow main to fill remaining height */
+fast-design-system-provider[use-defaults] {
+  display: flex !important;
+  min-height: 100vh;
+  height: 100%;
+  flex-direction: column;
+  width: 100%;
+  background-color: inherit; /* ensure dark background carries through */
+}
+
+header {
+  flex: 0 0 auto;
+  background-color: inherit !important; /* override inline classes */
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+main {
+  flex: 1 1 auto;
+  display: flex;
+  width: 100%;
+  min-height: 0; /* allow child flex to size/scroll */
+  background-color: inherit;
+  height: 100%;
+}
+
+/* Ensure route container uses full width and stretches */
+#route {
+  width: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow inner content to grow */
+  background-color: inherit;
+  height: 100%;
+}
+
+/* Make routed sections and their primary card fill available height */
+#route > section {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background-color: inherit;
+  height: 100%;
+}
+
+#route > section > fast-card:first-child {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
