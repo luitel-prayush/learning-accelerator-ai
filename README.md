@@ -52,11 +52,42 @@ The frontend proxies API requests to the FastAPI server via `vite.config.ts`:
 - `POST /api/learn/path` – get learning path for a topic
 - `POST /api/quiz/next` – get next quiz question
 - `POST /api/quiz/submit` – submit answer and receive score
+- `POST /api/chat` – chat with the assistant (requires OPENAI_API_KEY)
 - `GET /api/progress` – simple progress summary
 
 ## Development Tips
 - If ports differ, update the proxy target in `learning-accelerator-ai/vite.config.ts`.
 - Ensure the backend is running before using the app; the frontend depends on the `/api` routes.
+
+## Chat (OpenAI) Setup
+
+To use the Chat feature, you need an OpenAI API key.
+
+- **Get an API key**
+  1. Go to https://platform.openai.com/ and sign in.
+  2. Ensure you have a billing method set up (required to generate keys in most accounts).
+  3. Visit https://platform.openai.com/api-keys and click “Create new secret key”.
+  4. Copy the key (it looks like `sk-...`).
+
+- **Configure the environment**
+  - Copy `.env.example` to `.env` at the repo root and set:
+    ```
+    OPENAI_API_KEY=sk-your-key-here
+    ```
+  - `.env` is git-ignored; do not commit it.
+
+- **Run backend**
+  - Start the API server after setting the env file so it’s loaded:
+    ```bash
+    uvicorn learning-accelerator-ai.backend.app.main:app --reload --host 127.0.0.1 --port 8000
+    ```
+
+- **Test chat endpoint**
+  ```bash
+  curl -X POST http://127.0.0.1:8000/api/chat \
+    -H "Content-Type: application/json" \
+    -d '{"messages":[{"role":"user","content":"Hello!"}], "system":"You are a concise learning assistant."}'
+  ```
 
 ## Scripts
 Frontend (run inside `learning-accelerator-ai/`):
@@ -65,3 +96,10 @@ npm run dev       # start Vite dev server
 npm run build     # type-check + build
 npm run preview   # preview production build
 ```
+
+## License
+Choose a license for your project (e.g., MIT). You can add a `LICENSE` file at the repo root.
+
+## Contributing
+- Create feature branches from `main`.
+- Submit PRs for review.

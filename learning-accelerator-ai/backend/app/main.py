@@ -3,10 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from sqlalchemy.orm import Session
+from openai import OpenAI
+from dotenv import load_dotenv
 
 from .db import get_db, init_db
 from . import models
 
+load_dotenv()
 app = FastAPI(title="Learning Accelerator API", version="0.1.0")
 
 # CORS for Vite dev server
@@ -40,9 +43,36 @@ class QuizSubmitRequest(BaseModel):
     answer: str
 
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+    model: Optional[str] = None
+    system: Optional[str] = None
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/api/chat")
+def chat(req: ChatRequest):
+    try:
+        client = OpenAI()
+        msgs = []
+        if req.system:
+            msgs.append({"role": "system", "content": req.system})
+        msgs.extend({"role": m.role, "content": m.content} for m in req.messages)
+        model = req.model or "gpt-4o-mini"
+        resp = client.chat.completions.create(model=model, messages=msgs)
+        choice = resp.choices[0].message
+        return {"message": {"role": choice.role, "content": choice.content}}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Chat failed")
 
 
 @app.post("/api/topics/suggest")

@@ -4,3 +4,7 @@ pydantic==2.9.2
 SQLAlchemy==2.0.36
 alembic==1.14.0
 psycopg[binary]==3.2.12
+
+openai==1.51.0
+
+python-dotenv==1.0.1

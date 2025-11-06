@@ -6,6 +6,7 @@ import { LearnPage } from './pages/learn';
 import { QuizPage } from './pages/quiz';
 import { ProgressPage } from './pages/progress';
 import { TopicsPage } from './pages/topics';
+import { ChatPage } from './pages/chat';
 
 registerFAST();
 
@@ -21,6 +22,7 @@ app.innerHTML = `
         <fast-button appearance="accent" id="nav-learn">Learn</fast-button>
         <fast-button appearance="accent" id="nav-quiz">Quiz</fast-button>
         <fast-button appearance="accent" id="nav-progress">Progress</fast-button>
+        <fast-button appearance="accent" id="nav-chat">Chat</fast-button>
       </nav>
     </div>
   </header>
@@ -34,6 +36,7 @@ document.getElementById('nav-topics')?.addEventListener('click', () => navigate(
 document.getElementById('nav-learn')?.addEventListener('click', () => navigate('#/learn'));
 document.getElementById('nav-quiz')?.addEventListener('click', () => navigate('#/quiz'));
 document.getElementById('nav-progress')?.addEventListener('click', () => navigate('#/progress'));
+document.getElementById('nav-chat')?.addEventListener('click', () => navigate('#/chat'));
 
 // Register routes
 registerRoute('#/', () => HomePage(), () => {
@@ -144,6 +147,65 @@ registerRoute('#/progress', () => ProgressPage(), async () => {
   } catch (e) {
     route.querySelector('fast-card')?.insertAdjacentHTML('beforeend', `<div class="text-red-600 mt-2">Failed to load progress.</div>`);
   }
+});
+// Chat page
+registerRoute('#/chat', () => ChatPage(), async () => {
+  const route = document.getElementById('route') as HTMLDivElement;
+  const log = route.querySelector('#chat-log') as HTMLDivElement | null;
+  const input = route.querySelector('#chat-input') as HTMLInputElement | null;
+  const send = route.querySelector('#chat-send');
+  if (!log || !input || !send) return;
+  const logEl = log!;
+  const inputEl = input!;
+  const sendEl = send! as HTMLElement;
+  const messages: Array<{role: 'user'|'assistant'|'system'; content: string}> = [];
+  const topic = localStorage.getItem('la_topic') || '';
+  const system = topic ? `You are a helpful learning assistant. Be concise. Focus on the topic: ${topic}.` : 'You are a helpful learning assistant. Be concise.';
+
+  function append(role: string, content: string) {
+    const who = role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'System';
+    const item = document.createElement('div');
+    item.className = role === 'user' ? 'text-right' : 'text-left';
+    item.innerHTML = `<div class="inline-block rounded px-3 py-2 ${role==='user'?'bg-blue-600 text-white':'bg-neutral-200 dark:bg-neutral-800'}">` +
+      `<div class="text-xs opacity-70 mb-0.5">${who}</div>` +
+      `<div>${content.replace(/</g,'&lt;')}</div>` +
+      `</div>`;
+    logEl.appendChild(item);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const text = (inputEl.value || '').trim();
+    if (!text) return;
+    append('user', text);
+    messages.push({ role: 'user', content: text });
+    inputEl.value = '';
+    try {
+      const resp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages, system }),
+      });
+      const data = await resp.json();
+      const m = data?.message;
+      if (m?.content) {
+        messages.push({ role: 'assistant', content: m.content });
+        append('assistant', m.content);
+      } else {
+        append('assistant', 'No response.');
+      }
+    } catch (e) {
+      append('assistant', 'Request failed.');
+    }
+  }
+
+  sendEl.addEventListener('click', sendMessage);
+  inputEl.addEventListener('keydown', (ev: KeyboardEvent) => {
+    if (ev.key === 'Enter' && !ev.shiftKey) {
+      ev.preventDefault();
+      sendMessage();
+    }
+  });
 });
 registerRoute('#/404', () => `<fast-card class="p-6">Not Found</fast-card>`);
 
